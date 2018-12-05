@@ -1,0 +1,21 @@
+{
+	"account": {
+		"master": {
+			"username": "master",
+			"password": "master"
+		},
+		"ml": {
+			"username": "ml",
+			"password": "lm"
+		}
+	},
+	"tolerance": 20,
+	"venuemaxtrial": 2,
+	"timemaxtrial": 5,
+	"costmultiplier": 2,
+	"min_venue_capacity_req": 20,
+	"sessional_course_code": {
+		"SER001": true,
+		"LIB001": true
+    }
+}
