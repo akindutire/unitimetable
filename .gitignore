@@ -1,5 +1,5 @@
-.idea
-.vscode
+.idea/
+.vscode/
 php.xml
 vcs.xml
 workspace.xml
