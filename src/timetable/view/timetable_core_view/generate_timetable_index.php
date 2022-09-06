@@ -6,6 +6,7 @@ $absPath = $data[0];
 $absPathForLinks = $data[2];
 $baselink = $data[3];
 $tolerance = $data[4];
+$vtolerance = $data['v_tolearance'];
 
 $update_timetable_disabled = true;
 if($data['semester_on_allocation'] !== false){
@@ -70,6 +71,20 @@ if($data['semester_on_allocation'] !== false){
 
             </form>
 
+			<form class="w3-col l3 m5 s12 w3-border w3-card-2 w3-round w3-margin-right" style="" action="<?php echo "{$baselink}timetable/vtolerance"; ?>" method="post">
+
+                <span class="w3-col l4 m5 s4 w3-padding" style="padding-right: 2px !important;">
+
+                    <input title="Select Tolerance" type="number" min="0" max="50" name="tolerance" value="<?php echo $vtolerance; ?>" id="select_sem" class="w3-input w3-border w3-round"> 
+
+                </span>
+                <span class="w3-col l1 m1 s2 w3-padding-right w3-margin-top w3-large">%</span>
+                <span class="w3-col l3 m3 s5 w3-padding" style="padding-right: 0px !important;">
+                    <button class="w3-btn w3-blue-grey w3-round">Venue Tolerance</button>
+                </span>
+
+            </form>
+
 			
 		</div>
 
@@ -102,7 +117,7 @@ if($data['semester_on_allocation'] !== false){
 							</p>";
 						}else{
 							echo "<p class='w3-center w3-padding'>
-								<button class='w3-btn w3-orange w3-round' onclick='busy(this)'>Update Fixed Allocation</button>
+								<button class='w3-btn w3-orange w3-round' onclick='busy(this)'>Update Allocation</button>
 							</p>";
 						}
 						?>

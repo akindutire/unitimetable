@@ -21,7 +21,7 @@ $alldept = $data[6];
 <title>timetable</title>
 </head>
 
-<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; baselink='<?php echo $baselink; ?>'; dept_code='<?php echo $course['dept_info'][0]; ?>'; ">
+<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; baselink='<?php echo $baselink; ?>'; dept_code='<?php echo $course['dept_info'][0]; ?>'; " ng-cloak>
 
 
 

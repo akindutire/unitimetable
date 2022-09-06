@@ -31,7 +31,7 @@ include_once("includes.php");
 
 	$data = json_decode(file_get_contents("php://input"));
 	    
-		$f = (new dmgt())->fix_course_forcefully($data->course_code,$data->timings);
+		$f = (new dmgt())->fix_course_forcefully($data->course_code,$data->timings, $data->thrash);
 		
 		if($f == true){
 

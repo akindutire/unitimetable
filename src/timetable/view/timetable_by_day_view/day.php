@@ -14,7 +14,7 @@ $baselink = $data[3];
 <title>timetable</title>
 </head>
 
-<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; ">
+<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; " ng-cloak>
 
 
 
@@ -33,7 +33,7 @@ $baselink = $data[3];
 		<div class="w3-col l12 m12 s12 w3-animate-zoom w3-padding w3-margin-top">
 
 			<span class="w3-col l3 m4 s12 w3-padding w3-card-2 w3-border w3-round">
-				<a class="w3-col l12 m12 s12  w3-btn w3-round w3-border-blue-gray w3-blue-grey w3-padding" style="" href="<?php echo "{$data['ROUTER_LINK']}timetable"; ?>">Generate Timetable</a>
+				<a class="w3-col l12 m12 s12  w3-btn w3-round w3-border-blue-gray w3-blue-grey w3-padding" style="" href="<?php echo "{$data['ROUTER_LINK']}timetable"; ?>"><i class="fa fa-chevron-left"></i> Timetable Menu</a>
 			</span>
 			
 		</div>
@@ -55,10 +55,10 @@ $baselink = $data[3];
 
 	                        	echo "<div class=''>
 	                        			
-	                        			<span class='w3-margin-right'><a class='w3-small w3-bar-item w3-tag w3-white' style='text-decoration: none;' href='{$baselink}day/reset/$id'><i class='fa fa-cogs w3-text-red'></i>&nbsp;Reset</a></span>
+	                        			<span class='w3-margin-right'style='display:none;'><a class='w3-small w3-bar-item w3-tag w3-white' style='text-decoration: none;' href='{$baselink}day/reset/$id'><i class='fa fa-cogs w3-text-red'></i>&nbsp;Reset</a></span>
 		                        		
 		                        		
-		                        		<span class=''><a class='w3-small w3-bar-item w3-tag w3-white' target='_new' style='text-decoration: none;' href='{$baselink}day/open/$id'><i class='fa fa-eye'></i>&nbsp;View</a></span>
+		                        		<span class=''><a class='w3-small w3-bar-item w3-tag w3-white' target='_blank' style='text-decoration: none;' href='{$baselink}day/open/$id'><i class='fa fa-eye'></i>&nbsp;View</a></span>
 		                        		
 		                        		<elon class='w3-clear'></elon>
 	                        		

@@ -305,10 +305,14 @@
 
 			$rs = $sql->read('venue',[],['ID','Capacity','Location','Name', 'Not_In_Use', 'Multisight'], ['ORDER BY Capacity DESC, Name ASC']);
 			$arr['f_arr_venue'] = [];
+			$arr['v_arr_venue'] = [];
 			
 			while(list($id,$c,$l,$n, $not_in_use, $multisight) = $rs->fetch()){
 
 				$arr['f_arr_venue'][$id] = [$n,$c,$l,$not_in_use, $multisight];
+				
+				if($not_in_use == 0)
+					$arr['v_arr_venue'][$id] = [$n,$c,$l,$not_in_use, $multisight];
 			}
 
 			$rs = $sql->read('venue',[['Not_In_Use', 0]],['COUNT(ID)']);
@@ -436,6 +440,7 @@
 			return $rs;
 
 		}
+
 
 
 		public function get_course($dept_code){
@@ -601,26 +606,72 @@
 
 		}
 
-
-		public function set_course_constraint($c_code, $daybound, $lecturebound, $multisightbound, $no_of_class){
-
-			
+		public function set_course_allocation_plan($course_code, $allocation_plan){
 			$connect = (new Database())->connect();
 			
 			$sql = new BuildQuery($connect);
+			$plan = (new \ArrayObject($allocation_plan))->getIterator();
+
+			$prop = '';
+			foreach($plan as $p){
+				$prop .= "{$p};";
+			}
+			$prop = rtrim($prop, ';');
+			
+			$sql->delete('course_allocation_plan', [ ['Course_Code',$course_code] ]);
+			$rs=$sql->create('course_allocation_plan', [$course_code, $prop]);
+			
+			if($rs){
+				$this->msg = 1;	
+				return true;
+			}
+
+			return false;
+		}
+
+		public function get_course_allocation_plan($course_code){
+			$connect = (new Database())->connect();
+			
+			$sql = new BuildQuery($connect);
+			$rs = $sql->read('course_allocation_plan', [ ['Course_Code',$course_code] ], ['Proportion']);
+
+			if($rs->rowCount() > 0)
+				list($this->msg) = $rs->fetch();
+			else
+				$this->msg = '';
+				
+			return true;
+		}
+
+		public function remove_course_allocation_plan($course_code){
+			$connect = (new Database())->connect();
+			
+			$sql = new BuildQuery($connect);
+			$sql->delete('course_allocation_plan', [ ['Course_Code',$course_code] ]);
+			$this->msg = 1;
+			return true;
+		}
+
+		public function set_course_constraint($c_code, $daybound, $lecturebound, $multisightbound, $no_of_class){
+
+			$connect = (new Database())->connect();
+			
+			$sql = new BuildQuery($connect);
+
+
+			$sql->update('course',[ ['Code',$c_code] ],[ ['No_Of_Occurence',$no_of_class] ]);
 
 			$rs = $sql->read('course',[ ['Code',$c_code ],['ScheduleLimit','>',1] ], []);
 
 			$rs = $sql->read('course_constraint',[ ['Course_Code',$c_code] ], ['Time_Bound']);
 			list($p_t_bool) = $rs->fetch();
 
-			if($lecturebound==0 && $p_t_bool == 0){
+			if($lecturebound == 0 && $p_t_bool == 0){
 				$connect->query("DELETE FROM course_constraint WHERE Course_Code='$c_code' ");
 				$this->msg = 0;	
 				return true;
 			}
-			
-			$sql->update('course',[ ['Code',$c_code] ],[ ['No_Of_Occurence',$no_of_class] ]);
+
 			
 			if($multisightbound == 1)
 				$lecturebound = 1;
@@ -779,25 +830,25 @@
 
 			$arr = [];
 
-			$rs = $sql->read('fixed_allocation',[ ['Course_Code',$c_code], ['Fixed', 1] ],['ID', 'Venue_ID', 'Time', 'Day'], ['ORDER BY Day']);
+			$rs = $sql->read('fixed_allocation',[ ['Course_Code',$c_code], ['Fixed', 1] ],['ID', 'Venue_ID', 'Time', 'Day', 'All_Venue'], ['ORDER BY Day']);
 			if($rs->rowCount() > 0){
 				
 				/**#
 				 * days count start from 1
 				 */
-                $time = ['8/9' => '8am - 9am','9/10'=>'9am - 10am','10/11'=>'10am - 11am','11/12'=>'11am - 12pm','12/1'=>'12pm - 1pm','1/2'=>'1pm - 2pm','2/3'=>'2pm - 3pm','3/4'=>'3pm - 4pm','4/5'=>'4pm - 5pm','5/6'=>'5pm - 6pm'];
+                $time = [null,'8/9' => '8am - 9am','9/10'=>'9am - 10am','10/11'=>'10am - 11am','11/12'=>'11am - 12pm','12/1'=>'12pm - 1pm','1/2'=>'1pm - 2pm','2/3'=>'2pm - 3pm','3/4'=>'3pm - 4pm','4/5'=>'4pm - 5pm','5/6'=>'5pm - 6pm'];
 				$days = [null,'Monday','Tuesday','Wednesday','Thursday','Friday'];
 
 				$venue_stmt = $connect->prepare("SELECT Name FROM venue WHERE ID=?");
 
-                while(list($id, $v_id, $time_id, $day_id) = $rs->fetch()) {
+                while(list($id, $v_id, $time_id, $day_id, $all_venue_constraint) = $rs->fetch()) {
 
 					$venue_stmt->execute([$v_id]);
 
 					list($v_name) = $venue_stmt->fetch();
                                         
-                    $arr[$id] = [ "venue" => $v_name, "venue_id" => $v_id, "day" => $days[$day_id], "day_id" => $day_id, "time" => $time[$time_id], "time_id" => $time_id ];
-                    
+                    $arr[$id] = [ "venue" => $v_name, "venue_id" => $v_id, "day" => $days[$day_id], "day_id" => $day_id, "time" => $time[$time_id], "time_id" => $time_id, "all_venue_constraint" => $all_venue_constraint ];
+				 
                 }
 			}
 
@@ -805,7 +856,7 @@
 			return true;
 		}
 
-		public function check_course_affordance($course_code, $venue_id, $time_id,  $day_id, $size_of_uncommited_fixed_allocation){
+		public function check_course_affordance($course_code, $venue_id, $time_id,  $day_id, $size_of_uncommited_fixed_allocation, $v_f_exception){
 			$connect = (new Database())->connect();
 			
 			$sql = new BuildQuery($connect);
@@ -813,6 +864,12 @@
 			/**
 			 * Is venue exempted
 			 */
+
+			$rs = $sql->read('venue', [ ['ID', $venue_id], ['Not_In_Use', 1] ], ['ID']);
+			if($rs->rowCount() > 0){
+				$this->msg[0] = false;
+				return true;
+			}
 
 			$rs = $sql->read('venue_exemption', [ ['Course_Code', $course_code], ['Venue_ID', $venue_id] ], ['Venue_ID']);
 			if($rs->rowCount() > 0){
@@ -850,6 +907,9 @@
 					}
 				}
 			}
+			
+			$rs = $sql->read('course',[['Code', $course_code] ],['ScheduleLimit', 'No_Of_Occurence', 'Hour_required']);
+			list($no_of_class, $straight_hours, $total_hour_required) = $rs->fetch();
 
 			$rs = $sql->read('fixed_allocation', [   ['Course_Code',$course_code]	], []);
 			$total_times_allocated = $rs->rowCount();
@@ -857,14 +917,29 @@
 			$rs = $sql->read('allocation', [   ['Course_Code',$course_code]	], []);
         	$total_times_allocated += $rs->rowCount();
 			$total_times_allocated += $size_of_uncommited_fixed_allocation;
-			
-			$rs = $sql->read('course',[['Code', $course_code] ],['ScheduleLimit', 'No_Of_Occurence', 'Hour_required']);
-			list($no_of_class, $straight_hours, $total_hour_required) = $rs->fetch();
 
 			unset($rs);
-            
-        	$times_of_allocation = floor($total_times_allocated / ($no_of_class * $straight_hours) );
+			
+			if($v_f_exception){
+				$rs = $sql->read('venue', [ ['Not_In_Use', 0] ], ['ID']);
+				$vc = $rs->rowCount();
 
+				$rs = $sql->read('fixed_allocation', [   ['Course_Code',$course_code]	], []);
+				$total_times_allocated = $rs->rowCount() * $vc;
+
+				$rs = $sql->read('allocation', [   ['Course_Code',$course_code]	], []);
+				$total_times_allocated += $rs->rowCount();
+				$total_times_allocated += $size_of_uncommited_fixed_allocation * $vc;
+			
+				unset($vc);
+			}
+			
+			
+			
+
+			$times_of_allocation = floor($total_times_allocated / ($no_of_class * $straight_hours) );
+			
+			
         	if($times_of_allocation >= $total_hour_required){
 				$this->msg[0] = false;
 				if(isset($this->msg[1])){
@@ -878,11 +953,10 @@
 				}
 					
 			}
-
 			return true;
 		}
 
-		public function fix_course_forcefully($course_code, $timings){
+		public function fix_course_forcefully($course_code, $timings, $thrash){
 			$connect = (new Database())->connect();
 			
 			$sql = new BuildQuery($connect);
@@ -890,18 +964,37 @@
 			
 			$connect->query("DELETE FROM fixed_allocation WHERE Course_Code='$course_code' AND Fixed=1");
 			
+			$rs = $sql->read('course', [ ['Code', $course_code] ], ['No_Of_Occurence']);
+			list($no_of_class) = $rs->fetch();
+
+			foreach($thrash  as $thrashed_allocation){
+				$e = explode('|', $thrashed_allocation);
+
+			
+				if(sizeof($e) == 5){
+					$sql->delete('fixed_allocation', [ ['Venue_ID', $e[0]], ['Time', $e[2]], ['Day', $e[1]], ['Fixed', 1], ['All_Venue', $e[4]] ]);
+				}
+
+				
+			}
+			
+			unset($thrash, $e, $thrashed_allocation);
+
 			foreach($timings as $time){
 				$time_arr = explode('|',$time);
 
-				if(sizeof($time_arr) == 4){
+				if(sizeof($time_arr) == 5){
+
 					$venue = $time_arr[0];
 					$day = $time_arr[1];
 					$time = $time_arr[2];
 					
+					$v_exception = boolval($time_arr[4]) == true ? 1 : 0;
+					
 					$rs = $sql->read('fixed_allocation', [ ['Venue_ID', $venue], ['Time', $time], ['Day', $day] ], ['Fixed']);
 					
 					if($rs->rowCount() == 0){
-						if($sql->create('fixed_allocation', ['', $course_code, $venue, $time, $day, 1])){
+						if($sql->create('fixed_allocation', ['', $course_code, $venue, $time, $day, 1, $v_exception])){
 							
 							continue;
 						}
@@ -923,6 +1016,19 @@
 			$sql->delete('course_constraint',[ ['Course_Code',$c_code] ]);
 			$sql->delete('course',[ ['Code',$c_code] ]);
 			$sql->delete('venue_exemption',[ ['Course_Code',$c_code] ]);
+
+			$this->msg = true;
+			return true;
+			
+		}
+
+		public function remove_course_allocation_pathways($c_code){
+			$connect = (new Database())->connect();
+			
+			$sql = new BuildQuery($connect);
+
+			$sql->delete('allocation',[ ['Course_Code',$c_code] ]);
+			$sql->update('course',[ ['Code',$c_code] ], [ ['Allocation_Hit', 0] ]);
 
 			$this->msg = true;
 			return true;

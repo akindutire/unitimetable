@@ -25,7 +25,7 @@
 </head>
 
 
-<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; forgotten='<?php echo sizeof($forgotten_courses); ?>' " style="margin-top: 90px;">
+<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; forgotten='<?php echo sizeof($forgotten_courses); ?>' " style="margin-top: 90px;" ng-cloak>
 
 <header class="w3-xlarge w3-top" style="z-index: 1; background: rgba(0,0,0, .8); color: white; height: 70px;">
 	

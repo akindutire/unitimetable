@@ -50,7 +50,7 @@
                 
                 $Outputdata[6] = ucwords($semesterIndex);
                 
-                $Outputdata[7] = $d->getAllvenue()['f_arr_venue'];
+                $Outputdata[7] = $d->getAllvenue()['v_arr_venue'];
 
                 View::render('timetable_course_view/v_coursebysemester.php',$Outputdata);
 
@@ -69,7 +69,7 @@
 
 			if(isset($_POST['dept']) ){
 				
-				$Outputdata = [ $cfg->getAppPath(), 'view/asset/img/ui1.jpg', $cfg->getAppUrl(), $d->get_course($_POST['dept']), $cfg->getAppInit(), $d->getAllvenue()['f_arr_venue'], $d->getAlldepartment() ];
+				$Outputdata = [ $cfg->getAppPath(), 'view/asset/img/ui1.jpg', $cfg->getAppUrl(), $d->get_course($_POST['dept']), $cfg->getAppInit(), $d->getAllvenue()['v_arr_venue'], $d->getAlldepartment() ];
 
                 View::render('timetable_course_view/v_coursebydept.php',$Outputdata);
 			

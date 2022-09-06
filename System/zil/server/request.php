@@ -25,6 +25,7 @@ class Request extends Config{
             
             $request = rtrim($_SERVER['REQUEST_URI'],'/');
 
+
             if($base != '/')
                 $request = str_replace($base, '',  rtrim($_SERVER['REQUEST_URI'],'/').'/'  );
 

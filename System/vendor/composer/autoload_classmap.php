@@ -11,6 +11,7 @@ return array(
     'zil\\factory\\Authentication' => $baseDir . '/zil/factory/authentication.php',
     'zil\\factory\\BuildQuery' => $baseDir . '/zil/factory/buildQuery.php',
     'zil\\factory\\Database' => $baseDir . '/zil/factory/database.php',
+    'zil\\factory\\ErrorTracer' => $baseDir . '/zil/factory/errortracer.php',
     'zil\\factory\\Filehandler' => $baseDir . '/zil/factory/filehandler.php',
     'zil\\factory\\Fileuploader' => $baseDir . '/zil/factory/fileuploader.php',
     'zil\\factory\\Logger' => $baseDir . '/zil/factory/logger.php',

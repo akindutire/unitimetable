@@ -13,7 +13,7 @@ $absPathForLinks = $data[2];
 <title>timetable</title>
 </head>
 
-<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; ">
+<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; " ng-cloak>
 
 
 

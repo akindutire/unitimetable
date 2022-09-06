@@ -1,8 +1,12 @@
 a {
-  cursor: pointer !important;
+	cursor: pointer !important;
+}
+
+.robo-head {
+	font-family: 'Raleway' !important;
 }
 
 .timetable-blue {
-  background: #303f9f;
-  color: #fff;
+	background: #303f9f;
+	color: #fff;
 }

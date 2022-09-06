@@ -31,7 +31,7 @@ include_once("includes.php");
 	
 	if(!empty($data->department_code) && !empty($data->title) && !empty($data->code)){
 
-		$sanitize = new CQS_Sanitize;
+		$sanitize = new Sanitize;
 		$array = $sanitize->cleanData([$data->department_code,$data->title,$data->code,$data->unit]);
 		
 		$dmgt = new dmgt;

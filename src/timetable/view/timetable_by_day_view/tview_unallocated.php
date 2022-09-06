@@ -31,23 +31,25 @@
 		document.getElementById('fix_course_modal').style.display = 'block';
 
 	}	
-
+	
 </script>
 
 </head>
 
 
-<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; unallocated='<?php echo sizeof($unallocated_courses); ?>'; tolerance=20 " style="margin-top: 90px;">
+<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; unallocated='<?php echo sizeof($unallocated_courses); ?>'; tolerance=20; gwork.models.tolerance=20 " style="margin-top: 90px;" ng-cloak>
 
 <header class="w3-xlarge w3-top" style="z-index: 1; background: rgba(0,0,0, .8); color: white; height: 70px;">
 	
 	<p class="w3-center" style="margin-top: 10px;">{{ unallocated }} Incomplete Allocation </p>
+	
+	<a ng-show="gwork.unallocatedCheckListLength > 0" onclick="document.getElementById('batch_fix_course_modal').style.display = 'block';" style="position: absolute; box-shadow:0px 0px 59px -3px rgba(0,0,0,0.75); right: 40px; top: 40px; background: #ff9100; border-radius: 50%; padding: 16px;"> <i class="fa fa-wrench"></i></a>
 
 </header>
 
 
 <div class="w3-modal" id="fix_course_modal" style="display: none;">
-	<div class="w3-modal-content w3-white" style="width: 50% !important;">
+	<div class="w3-modal-content w3-white" style="width: 50% !important; opacity:0.9;">
 		
 		<div class="w3-display-container" style="top: 5%;">
 			<a id="CourseCodeId" class="w3-display-topleft w3-padding w3-large"></a>
@@ -57,7 +59,7 @@
 
 		
 
-		<div class="w3-container" style="padding-top: 3% !important;">
+		<div class="w3-container" style="padding-top: 3% !important; ">
 			
 			<hr class="w3-col">
 			
@@ -90,6 +92,65 @@
 	</div>
 </div>
 
+<div class="w3-modal" id="batch_fix_course_modal" style="display: none;">
+	<div class="w3-modal-content w3-white" style="width: 50% !important; opacity:0.85;">
+		
+		<div class="w3-display-container" style="top: 5%;">
+			<a class="w3-display-topleft w3-padding w3-large">Batch Fix</a>
+			
+			<a class="w3-display-topright w3-tag w3-red w3-padding" onclick="document.getElementById('batch_fix_course_modal').style.display='none';"><i class="fa fa-times"></i></a>
+		</div>
+
+		
+
+		<div class="w3-container" style="padding-top: 3% !important;">
+			
+			<hr class="w3-col">
+			
+			
+			<form class="w3-col l12 m12 s12 w3-form">
+
+				<br><input type="checkbox" class="w3-input" style="width: auto; margin-right: 8px; display: inline;" id="bc_clash" checked>Avoid Course Clash<br><br>
+
+				<br>
+				
+				<div class="w3-col l6 m6 s12 w3-padding">
+					<input type="number" min="0" max="100" required="required" ng-model='gwork.models.tolerance' class="w3-input w3-required w3-border w3-round"><small class="w3-center">Tolerance</small>
+				</div>
+					
+				<div class="w3-col l6 m6 s12 w3-padding">
+					<select ng-model='gwork.models.day' class="w3-select w3-required w3-border w3-round">
+						
+						<option value="1">Monday</option>
+						<option value="2">Tuesday</option>
+						<option value="3">Wednesday</option>
+						<option value="4">Thursday</option>
+						<option value="5">Friday</option>
+
+					</select>
+				</div>
+				
+				<div class="w3-row" ng-repeat="(c,v) in gwork.unallocatedCheckList">
+					
+					<div class="w3-col l12 m12 s12 w3-padding">
+						<input type="text" required="required" value={{c}} readonly class="w3-input w3-required  w3-border w3-round">
+					</div>
+						
+					
+
+					<br><br>
+
+				</div>
+
+				<p class="w3-center"><button ng-click=batch_fix_course($event) type="button" class="w3-btn w3-blue-grey w3-padding w3-ripple w3-round w3-margin-left">Batch Fix</button></p>
+
+			</form>
+			<br>
+
+			
+		</div>
+	</div>
+</div>
 
 <!--An header-->
 	<?php  //include_once("{$absPath}view/asset/template/header.php"); ?>
@@ -103,10 +164,10 @@
 	<section class="w3-col l12 m12 s12">
 		
 		
-
 		<table class="w3-table w3-col l12 m12 s12 w3-small w3-border w3-bordered w3-center">
 			<thead>
 				<tr>
+					<td></td>
 					<td>#</td>
 					<td>Course</td>
 					<td></td>
@@ -126,6 +187,7 @@
 						$i += 1;
 						echo "<tr>
 								<td>{$i}</td>
+								<td><input ng-click='stageUnallocatedChecks(\$event)' type='checkbox' name='' value='{$code}'></td>
 								<td>{$code}</td>
 								<td>{$params[0]}</td>
 								<td class='w3-center w3-border'>{$params[4]}</td>
@@ -148,10 +210,10 @@
 	<?php //include_once("{$absPath}view/asset/template/footer.php"); ?>
 
 
+
 <script type="text/javascript" src="<?php echo "{$absPathForLinks}view/asset/js/angularApp/course.js"; ?>"></script>
 
 
-<script src="<?php echo "{$absPathForLinks}view/asset/bower_components/jquery/dist/jquery.min.js"; ?>"></script>
 <script src="<?php echo "{$absPathForLinks}view/asset/bower_components/js-xlsx/dist/xlsx.core.min.js"; ?>"></script>
 <script src="<?php echo "{$absPathForLinks}view/asset/bower_components/file-saverjs/FileSaver.min.js"; ?>"></script>
 <script src="<?php echo "{$absPathForLinks}view/asset/bower_components/tableexport.js/dist/js/tableexport.min.js"; ?>"></script>

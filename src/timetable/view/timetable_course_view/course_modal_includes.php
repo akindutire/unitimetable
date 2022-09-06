@@ -10,8 +10,11 @@
 
         <div class="w3-display-container" style="top: 5%;">
             <a class="w3-display-topleft w3-padding w3-large">Edit {{ gwork.c_code }}  </a>
-
-            <button class="w3-btn w3-red w3-display-topmiddle w3-round" type="button" ng-click=remove_course($event)>Delete Course</button>
+            
+            <span class="w3-display-topmiddle">
+                <button class="w3-btn w3-red w3-round" type="button" ng-click=remove_course($event)>Delete Course</button>
+                <button class="w3-btn w3-pale-red  w3-round" type="button" ng-click=remove_allocation_pathway($event)>Delete Allocation Pathways</button>
+           </span>
 
             <a class="w3-display-topright w3-tag w3-red w3-padding" ng-click="close_setting()"><i class="fa fa-times"></i></a>
         </div>
@@ -19,6 +22,8 @@
         <hr class="w3-col">
 
         <div class="w3-container" style="padding-top: 5% !important;">
+
+         
 
             <section id="notif" class="w3-col l12 m12 s12">
                 <span class="w3-text-green w3-animate-fading w3-margin-left">{{ loading_notification }}</span>
@@ -82,9 +87,23 @@
             <section class="w3-col l6 m6 s12 w3-padding">
                 <div class="w3-padding w3-border w3-round w3-card-2 w3-col">
 
-                    <p class="w3-col l12 m12 s12">Course Contraints&nbsp; <a id="multiresource" style="display: none;" class="w3-badge w3-round  w3-gray w3-small">multi sight</a></p>
-                    <p><h5>Note:</h5> <span>1. All Classes would be held the same day. For manipulations use the <span class="w3-text-blue">fix course</span>  button</span></p>
-                    <form class="w3-col l12 m12 s12" id="form_course_constraint">
+                    <p class="w3-col l12 m12 s12"><span ng-show="!course_constraint_strict_mode">Course Contraints</span> <span ng-show="course_constraint_strict_mode">Strict Mode</span>&nbsp; <a id="multiresource" style="display: none;" class="w3-badge w3-round  w3-blue w3-small">multi sight</a>
+                    
+                    <a  title="Strict mode" ng-if="!course_constraint_strict_mode"  ng-click=enter_course_constraint_strict_mode($event) class="w3-right w3-text-blue"><i class="fas fa-cog"></i></a>
+
+                    <a  title="Exit Strict mode" ng-if="course_constraint_strict_mode"  ng-click=leave_course_constraint_strict_mode($event) class="w3-right w3-text-blue"><i class="fas fa-arrow-left"></i></a>
+
+                    </p>
+                    
+                    <div ng-if="!course_constraint_strict_mode">
+                        <p><h5>Note:</h5> <span>1. All Classes would be held the same day. For manipulations use the <span class="w3-text-blue">fix course</span>  button</span></p>
+                    </div>
+
+                    <div ng-if="course_constraint_strict_mode">
+                        <p><h5>Note:</h5> <span>1. You can set proportions of classes you want here</span></p>
+                    </div>
+
+                    <form ng-show="!course_constraint_strict_mode" class="w3-col l12 m12 s12" id="form_course_constraint">
 
                         <label>Max. No. of Classes</label>
                         <input type="text" id="no_of_class"  class="w3-input w3-col l12 m12 s12 w3-border w3-round w3-margin-bottom" ng-keyup=check_constraint($event) id="no_of_class"><br><br>
@@ -101,6 +120,23 @@
                         </elon>
 
                         <!--<p class="w3-center w3-margin-top"><button ng-click=edit_course_constraint($event) type="button" class="w3-btn w3-blue-grey w3-padding w3-ripple w3-round">Save</button></p>-->
+
+                    </form>
+
+                    <form class="w3-col l12 m12 s12 w3-border-pale-red" ng-show="course_constraint_strict_mode" id="form_course_constraint_strict_mode">
+
+                        <div id="form_course_constraint_strict_mode_editable">
+                        
+                        </div>
+
+                       
+
+                        <p class="w3-center w3-margin-top">
+                            <button ng-disabled="gwork.class_proportion_overflow" ng-click=edit_course_allocation_plan($event) type="button" class="w3-btn w3-blue-grey w3-padding w3-ripple w3-round">Save</button>
+
+                            <button ng-disabled="!gwork.course_allocation_plan_exists" ng-click=remove_course_allocation_plan($event) type="button" class="w3-btn w3-red w3-padding w3-ripple w3-round">Thrash</button>
+
+                        </p>
 
                     </form>
 
@@ -186,7 +222,7 @@
                         <label>Department (ctrl + <i class="fas fa-arrow-down"></i> for multiple dept.)</label><br>
                         <select title="Select Department" ng-focus="monitor_changes()" name="dept" id="dept"  class="w3-input w3-col l12 m12 s12 w3-border w3-round w3-margin-bottom"  multiple="multiple">
 
-                            
+                            <option value=0 ng-click="selectAllVenuesof('form#course_participant_frm select#dept')" style="width: auto;" class="w3-pale-blue">--All Dept.--</option>
                             <?php
 
                             foreach ($alldept as $faculty_name => $dept_arr) {
@@ -257,12 +293,14 @@
 
                         <label>Venue</label><br>
                         <select class="w3-select w3-required w3-col l12 m12 s12 w3-border w3-round w3-margin-bottom" ng-focus="monitor_changes()" id='venue_list' multiple="multiple">
-                            <option value=0 onclick="documennt.querySelector('form#fixed_allocation_frm select#venue_list').select">--All Venue--</option>
+
+                            <option value=0 id="all" style="width: 100%;" class="w3-pale-blue" ng-click="selectAllVenuesof('form#fixed_allocation_frm select#venue_list')">--All Venue--</option>
                             <?php
 
-                            foreach ($venue as $id => $v) {
-                                echo "<option value='{$id}'>{$v[0]}</option>";
-                            }
+                                foreach ($venue as $id => $v) {
+                                    echo "<option value='{$id}'>{$v[0]}</option>";
+                                }
+
                             ?>
 
                         </select><br>

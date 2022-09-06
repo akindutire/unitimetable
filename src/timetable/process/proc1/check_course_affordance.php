@@ -30,12 +30,13 @@ include_once("includes.php");
 
 	$data = json_decode(file_get_contents("php://input"));
 	
+
 	if(!empty($data->course_code) && (!empty($data->venue_id) || !empty($data->time_id) || !empty($data->day_id))){
 
 		$dmgt = new dmgt;
 
 	
-		$feedback = $dmgt->check_course_affordance($data->course_code, $data->venue_id, $data->time_id, $data->day_id, $data->size_of_uncommitted_allocation);
+		$feedback = $dmgt->check_course_affordance($data->course_code, $data->venue_id, $data->time_id, $data->day_id, $data->size_of_uncommitted_allocation, $data->v_f_exception);
 		
 		if ($feedback == true)
 			echo json_encode(["msg"=>$dmgt->msg,"success"=>1]);

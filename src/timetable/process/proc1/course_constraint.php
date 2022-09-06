@@ -38,7 +38,7 @@ include_once("includes.php");
 		$dmgt = new dmgt;
 
 		$feedback = $dmgt->set_course_constraint($data->course_code,$data->daybound,$data->lecturebound,$data->multisightbound, $data->no_of_class );
-		
+
 		if ($feedback == true){
 			echo json_encode(["msg"=>$dmgt->msg,"success"=>1]);
 		}

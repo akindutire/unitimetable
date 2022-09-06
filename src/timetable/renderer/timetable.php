@@ -40,7 +40,7 @@
 
 			$timetable = new timetablemodel();
 
-			$Outputdata = [ $cfg->getAppPath(),'view/asset/img/ui1.jpg',$cfg->getAppUrl(), $cfg->getAppInit(), $timetable->getTolerance(), 'semester_on_allocation'=>$timetable->whichSemesterOnAllocation() ];
+			$Outputdata = [ $cfg->getAppPath(),'view/asset/img/ui1.jpg',$cfg->getAppUrl(), $cfg->getAppInit(), $timetable->getTolerance(), 'semester_on_allocation'=>$timetable->whichSemesterOnAllocation(), 'v_tolearance'=>$timetable->getVenueTolerance(), ];
 
 			View::render('timetable_core_view/generate_timetable_index.php',$Outputdata);
 
@@ -109,6 +109,27 @@
 
         }
 
+		public function vtolerance(){
+
+        	$cfg = new config;
+
+        	$Outputdata = [$cfg->getAppPath(), 'view/asset/img/ui1.jpg', $cfg->getAppUrl(),  $cfg->getAppInit()];
+
+        	if(isset($_POST['tolerance'])){
+
+        		if($_POST['tolerance'] >= 0 || $_POST['tolerance'] <= 50){
+
+        			$timetable = new timetablemodel();
+
+        			$timetable->setVenueTolerance($_POST['tolerance']);
+        		}
+
+        	}
+
+        	new Redirect("{$Outputdata[3]}timetable");
+
+		}
+		
         public function v(){
 
         	$cfg = new config;

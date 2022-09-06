@@ -36,7 +36,7 @@ include_once("includes.php");
 		
 		$dmgt = new dmgt;
 
-		$feedback = $dmgt->addvenue(ucwords($array[0]),$array[1],ucwords($array[2]));
+		$feedback = $dmgt->addvenue(ucwords($array[0]),$array[1],ucwords($array[2]), false, false);
 		
 		if ($feedback == true)
 			echo json_encode(["msg"=>$dmgt->msg[1],"success"=>1,"id"=>$dmgt->msg[0]]);

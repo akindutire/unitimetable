@@ -20,7 +20,7 @@
 <title>timetable</title>
 </head>
 
-<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; ">
+<body ng-app="app" ng-controller="ctrl" ng-init=" absPath='<?php echo $absPathForLinks; ?>'; " ng-cloak>
 
 
 
@@ -34,7 +34,7 @@
 		<?php //include_once("{$absPath}view/asset/template/sidebar.php"); ?>
 	
 
-	<section class="w3-col l12 m12 s12">
+	<section id="TableSection" class="w3-col l12 m12 s12" style="position: relative;">
 		
 	
 		
@@ -71,14 +71,22 @@
 						
 
 						$nextcount = 0;
-						foreach ($v_param['course'] as $id => $course) {
+						foreach ($v_param['course'] as $id => $course_arr) {
 							
 
 							for($i = $nextcount; $i <= 9; $i++){							
 
 								if($id == $i){
 
-									echo "<td class='w3-border-right'>{$course}</td>";
+									$cccd = $course_arr['courseCode'];
+									$allocationIndex = $course_arr['allocationIndex'];
+
+									
+									echo "
+									
+									<td ng-click='allocationRefelection(\$event)' data-allocation-id='{$allocationIndex}' data-course-code='{$cccd}' class='w3-border-right'>{$cccd}
+									
+									</td>";
 									$nextcount = $id+1;
 									break;
 								
@@ -109,11 +117,15 @@
 <!--Footer-->
 	<?php //include_once("{$absPath}view/asset/template/footer.php"); ?>
 
+<style type="text/css">
+	
+	@import '<?php echo "{$absPathUrl}view/asset/node_modules/animate.css/animate.min.css"; ?>';
+	
+</style>
 
 
 <script type="text/javascript" src="<?php echo "{$absPathForLinks}view/asset/js/angularApp/course.js"; ?>"></script>
 
-<script src="<?php echo "{$absPathForLinks}view/asset/bower_components/jquery/dist/jquery.min.js"; ?>"></script>
 <script src="<?php echo "{$absPathForLinks}view/asset/bower_components/js-xlsx/dist/xlsx.core.min.js"; ?>"></script>
 <script src="<?php echo "{$absPathForLinks}view/asset/bower_components/file-saverjs/FileSaver.min.js"; ?>"></script>
 <script src="<?php echo "{$absPathForLinks}view/asset/bower_components/tableexport.js/dist/js/tableexport.min.js"; ?>"></script>

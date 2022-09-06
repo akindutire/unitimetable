@@ -26,6 +26,7 @@ class ComposerStaticInitd90b572808bdd826142080a9a9dc6f78
         'zil\\factory\\Authentication' => __DIR__ . '/../..' . '/zil/factory/authentication.php',
         'zil\\factory\\BuildQuery' => __DIR__ . '/../..' . '/zil/factory/buildQuery.php',
         'zil\\factory\\Database' => __DIR__ . '/../..' . '/zil/factory/database.php',
+        'zil\\factory\\ErrorTracer' => __DIR__ . '/../..' . '/zil/factory/errortracer.php',
         'zil\\factory\\Filehandler' => __DIR__ . '/../..' . '/zil/factory/filehandler.php',
         'zil\\factory\\Fileuploader' => __DIR__ . '/../..' . '/zil/factory/fileuploader.php',
         'zil\\factory\\Logger' => __DIR__ . '/../..' . '/zil/factory/logger.php',

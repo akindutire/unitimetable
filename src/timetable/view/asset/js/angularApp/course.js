@@ -1,12 +1,20 @@
 var app = angular.module('app', [ 'ngSanitize' ]);
 
-app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
+app.controller('ctrl', function($scope, $window, $http, $location, $sce, $compile) {
 	$scope.retryCount = 0;
 	$scope.gwork = {};
+	$scope.gwork.models = {};
+	$scope.gwork.unallocatedCheckList = {};
 	$scope.gwork.changes = [];
 	$scope.gwork.isChanges = false;
 	$scope.gwork.courseparticipants = [];
 	$scope.gwork.fixedtimings = [];
+	$scope.gwork.fixedtimings_thrash = [];
+	$scope.gwork.allselected = false;
+	$scope.gwork.class_proportion_overflow = false;
+	$scope.gwork.course_allocation_plan_exists = false;
+
+	$scope.course_constraint_strict_mode = false;
 
 	$scope.open_course_setting = function(event, code = null) {
 		if (code === null) {
@@ -53,12 +61,21 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 	};
 
 	$scope.load_fix_timings = function(c_code) {
+		console.log($scope.gwork.fixedtimings);
+		if ($scope.gwork.fixedtimings.length > 0) {
+			if ($window.confirm('Some timings has been staged\n, Do you want to reset it')) {
+				$scope.gwork.fixedtimings = [];
+				$scope.gwork.fixedtimings_thrash = [];
+			}
+		}
+
 		url = $scope.absPath + 'process/proc1/get_fix_timings.php';
 		data = {};
 		data.course_code = c_code;
+
 		$http.post(url, data).then(
 			function(response) {
-				//console.log(response.data);
+				console.log(response.data);
 				if (response.data.success === 1) {
 					arr = response.data.msg;
 
@@ -69,10 +86,21 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 					for (var i in arr) {
 						item = arr[i];
 						// console.log(item);
-						key = item.venue_id + '|' + item.day_id + '|' + item.time_id + '|' + 0;
+						key =
+							item.venue_id +
+							'|' +
+							item.day_id +
+							'|' +
+							item.time_id +
+							'|' +
+							0 +
+							'|' +
+							item.all_venue_constraint;
 						$scope.gwork.fixedtimings.push(key);
 
-						v_txt = '? System decides venue ';
+						if (item.all_venue_constraint == 1) v_txt = 'All venues ';
+						else v_txt = '? System decides venue ';
+
 						d_txt = '? System decides day';
 						t_txt = '? System decides time';
 
@@ -282,6 +310,176 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 		);
 	};
 
+	$scope.enter_course_constraint_strict_mode = function(event) {
+		cur_element = event.path[0];
+
+		c = document.querySelector('form#form_course_constraint input#no_of_class');
+		no_of_class = +c.value;
+
+		if (no_of_class < 2) {
+			$window.alert("Couldn't proceed. Strict mode is for constrained course");
+			return;
+		}
+
+		url = $scope.absPath + 'process/proc1/get_course_allocation_plan.php';
+		data = {};
+		if (typeof $scope.gwork.c_code != undefined) {
+			data.course_code = $scope.gwork.c_code;
+		} else {
+			return;
+		}
+
+		$http.post(url, data).then(
+			function(response) {
+				if (response.data.success == 1) {
+					if (response.data.msg.length != 0) {
+						default_val = null;
+
+						propss = response.data.msg.split(';');
+						$scope.gwork.course_allocation_plan_exists = true;
+					} else {
+						$scope.gwork.course_allocation_plan_exists = false;
+						default_val = 100 / no_of_class;
+					}
+
+					$scope.course_constraint_strict_mode = true;
+
+					classes = '';
+
+					for (var i = 1; i <= +no_of_class; i++) {
+						id = 'class' + i;
+						$scope[id] = default_val;
+						if (default_val === null) $scope[id] = +propss[i - 1];
+						classes +=
+							'<label>Class ' +
+							i +
+							" (<b class='w3-text-blue'>{{ " +
+							id +
+							" }}%</b>) <label><input type='range' data-e-id=" +
+							i +
+							" id='" +
+							id +
+							"' ng-model='" +
+							id +
+							'\' ng-change="monitor_class_allocation_range(' +
+							id +
+							', ' +
+							no_of_class +
+							")\" min=0 max=100 class='w3-input w3-col l12 m12 s12  w3-margin-bottom'><br><br>";
+					}
+
+					document.querySelector(
+						'form#form_course_constraint_strict_mode div#form_course_constraint_strict_mode_editable'
+					).innerHTML = classes;
+
+					$compile(document.querySelector('form#form_course_constraint_strict_mode'))($scope);
+				}
+			},
+			function(status) {}
+		);
+	};
+
+	$scope.leave_course_constraint_strict_mode = function(event) {
+		cur_element = event.path[0];
+		$scope.course_constraint_strict_mode = false;
+	};
+
+	$scope.monitor_class_allocation_range = function(model_val, no_of_class) {
+		t = 0;
+
+		for (var i = 1; i <= +no_of_class; i++) {
+			id = 'class' + i;
+			t += $scope[id];
+		}
+
+		if (t > 100) {
+			$scope.gwork.class_proportion_overflow = true;
+			$window.alert('Max. proportion reached');
+		} else if (t < 100) {
+			$scope.gwork.class_proportion_overflow = true;
+		} else if (t == 100) {
+			$scope.gwork.class_proportion_overflow = false;
+		}
+	};
+
+	$scope.remove_course_allocation_plan = function(event) {
+		event.stopImmediatePropagation();
+		url = $scope.absPath + 'process/proc1/remove_course_allocation_plan.php';
+		data = {};
+
+		if (typeof $scope.gwork.c_code != undefined) {
+			data.course_code = $scope.gwork.c_code;
+
+			$http.post(url, data).then(
+				function(response) {
+					console.log(response.data);
+
+					if (response.data.success === 1) {
+						$scope.loading_notification = 'Allocation Plan removed';
+						$scope.gwork.course_allocation_plan_exists = false;
+					} else {
+						$scope.loading_notification = '';
+						$scope.gwork.course_allocation_plan_exists = true;
+					}
+				},
+				function(status) {}
+			);
+		}
+	};
+
+	$scope.edit_course_allocation_plan = function(event) {
+		event.stopImmediatePropagation();
+
+		url = $scope.absPath + 'process/proc1/edit_course_allocation_plan.php';
+		data = {};
+
+		if (typeof $scope.gwork.c_code != undefined) {
+			data.course_code = $scope.gwork.c_code;
+
+			data.allocation_plan = {};
+
+			c = document.querySelector('form#form_course_constraint input#no_of_class');
+			c_val = +c.value;
+
+			if (c_val > 1) {
+				c_v = 0;
+				for (var i = 1; i <= c_val; i++) {
+					v = document.querySelector(
+						'form#form_course_constraint_strict_mode div#form_course_constraint_strict_mode_editable input#class' +
+							i
+					).value;
+					c_v += +v;
+					data.allocation_plan[i] = v;
+				}
+			}
+
+			if (c_v > 100) {
+				data.allocation_plan = {};
+				$window.alert('Max proportion exceeded');
+				return;
+			}
+
+			c_v = undefined;
+
+			data = JSON.stringify(data);
+
+			$scope.loading_notification = 'Processing Allocation Plan...';
+
+			$http.post(url, data).then(
+				function(response) {
+					console.log(response.data);
+
+					if (response.data.success === 1) {
+						$scope.loading_notification = 'Allocation Plan Saved';
+					} else {
+						$scope.loading_notification = '';
+					}
+				},
+				function(status) {}
+			);
+		}
+	};
+
 	$scope.logFixedTimingsRemoval = function(e) {
 		event.stopImmediatePropagation();
 
@@ -293,6 +491,7 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 			i = $scope.gwork.fixedtimings.indexOf(allocationkey);
 
 			$scope.gwork.fixedtimings.splice(i, 1);
+			$scope.gwork.fixedtimings_thrash.push(allocationkey);
 
 			cur_element.parentElement.parentElement.remove();
 		} else {
@@ -360,25 +559,58 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 	};
 
 	$scope.fix_course_to_slot = function(e) {
-		venue = document.querySelector('form#fixed_allocation_frm select#venue_list');
 		day = document.querySelector('form#fixed_allocation_frm select#day');
 		time = document.querySelector('form#fixed_allocation_frm select#time');
-		if (venue.value != 0 || day.value != 0 || time.value != 0) {
-			$scope.check_course_affordability($scope.gwork.c_code, venue.value, time.value, day.value);
+		venue = document.querySelector('form#fixed_allocation_frm select#venue_list');
+
+		vs = venue.selectedOptions;
+
+		/**
+		 * System override all venues by not checking it they are busy
+		 */
+		if (document.querySelector('form#fixed_allocation_frm select#venue_list option#all').selected) {
+			if (day.value != 0 || time.value != 0) {
+				$scope.check_course_affordability($scope.gwork.c_code, 0, time.value, day.value, 1);
+			} else {
+				alert('Please choose at least a Venue or Day or Time');
+			}
 		} else {
-			alert('Please choose at least a Venue or Day or Time');
+			if (vs.length > 0) {
+				if (time.value != 0) {
+					if (vs.length != document.querySelector('form#form_course_constraint input#no_of_class').value) {
+						$window.alert('No. of venue selected must equal max. allocation per day');
+						return;
+					}
+				}
+
+				for (var i = 0; i < venue.selectedOptions.length; i++) {
+					if (vs[i].value != 0 || day.value != 0 || time.value != 0) {
+						$scope.check_course_affordability($scope.gwork.c_code, vs[i], time.value, day.value);
+					} else {
+						$window.alert('Please choose at least a Venue or Day or Time');
+					}
+				}
+			} else {
+				if (day.value != 0 || time.value != 0) {
+					$scope.check_course_affordability($scope.gwork.c_code, 0, time.value, day.value);
+				} else {
+					alert('Please choose at least a Venue or Day or Time');
+				}
+			}
 		}
+
 		// console.log($scope.gwork.fixedtimings);
 	};
 
-	$scope.check_course_affordability = function(c_code, venue, time, day) {
+	$scope.check_course_affordability = function(c_code, venue, time, day, v_exception = 0) {
 		url = $scope.absPath + 'process/proc1/check_course_affordance.php';
 		data = {};
 		data.course_code = c_code;
-		data.venue_id = venue;
+		data.venue_id = venue.value || 0;
 		data.time_id = time;
 		data.day_id = day;
 		data.size_of_uncommitted_allocation = $scope.gwork.fixedtimings.length;
+		data.v_f_exception = v_exception;
 
 		$http.post(url, data).then(
 			function(response) {
@@ -393,19 +625,30 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 
 						return false;
 					} else {
-						venue = document.querySelector('form#fixed_allocation_frm select#venue_list');
+						// Use individual venue passed
+						// venue = document.querySelector('form#fixed_allocation_frm select#venue_list');
+
 						day = document.querySelector('form#fixed_allocation_frm select#day');
 						time = document.querySelector('form#fixed_allocation_frm select#time');
 
-						key = venue.value + '|' + day.value + '|' + time.value + '|' + 0;
+						if (venue != 0) v = venue.value;
+						else v = 0;
+
+						key = v + '|' + day.value + '|' + time.value + '|' + 0 + '|' + v_exception;
 						if ($scope.gwork.fixedtimings.indexOf(key) < 0) {
 							$scope.gwork.fixedtimings.push(key);
 
-							v_txt = '? System decides venue ';
+							if (v_exception == 1) v_txt = 'All venues ';
+							else v_txt = '? System decides venue ';
+
 							d_txt = '? System decides day';
 							t_txt = '? System decides time';
 
-							if (venue.value != 0) v_txt = venue.options[venue.selectedIndex].text;
+							// if (venue.value != 0) v_txt = venue.options[venue.selectedIndex].text;
+
+							if (venue != 0) {
+								if (venue.value != 0) v_txt = venue.text;
+							}
 
 							if (day.value != 0) d_txt = day.options[day.selectedIndex].text;
 
@@ -438,10 +681,15 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 		level = document.querySelector('form#course_participant_frm select#level').value;
 
 		for (var i = 0; i < departmentSelectedBox.length; i++) {
+
+			if(departmentSelectedBox[i].value == 0) continue;
+
+			
+			
 			key = departmentSelectedBox[i].value + '' + level;
 			if ($scope.gwork.courseparticipants.indexOf(key) < 0) {
 				if (departmentSelectedBox[i].value != 0 && level != 0) {
-					$scope.gwork.courseparticipants.push(key);
+					$scope.gwork.courseparticipants.unshift(key);
 
 					template =
 						"<p class='w3-margin-top w3-col l12 m12 s12'><a class='w3-text-red' data-p-id=" +
@@ -461,16 +709,18 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 			}
 		}
 
-		console.log($scope.gwork.courseparticipants);
+		// console.log($scope.gwork.courseparticipants);
 	};
 
 	$scope.close_fixed_allocation = function() {
 		document.getElementById('fixed_allocation_modal').style.display = 'none';
+		$scope.gwork.allselected = false;
 	};
 
 	$scope.close_course_participants = function() {
 		document.getElementById('course_setting_modal').style.display = 'block';
 		document.getElementById('course_participant_modal').style.display = 'none';
+		$scope.gwork.allselected = false;
 	};
 
 	$scope.monitor_changes = function() {
@@ -481,13 +731,21 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 		url = $scope.absPath + 'process/proc1/edit_course_fixings.php';
 		data = {};
 
-		if (typeof $scope.gwork.c_code != undefined && $scope.gwork.fixedtimings.length > 0) {
+		if (
+			typeof $scope.gwork.c_code != undefined &&
+			($scope.gwork.fixedtimings.length > 0 || $scope.gwork.fixedtimings_thrash.length > 0)
+		) {
 			data.course_code = $scope.gwork.c_code;
 
 			data.timings = {};
+			data.thrash = {};
 
 			for (var i = 0; i < $scope.gwork.fixedtimings.length; i++) {
 				data.timings[i] = $scope.gwork.fixedtimings[i];
+			}
+
+			for (var i = 0; i < $scope.gwork.fixedtimings_thrash.length; i++) {
+				data.thrash[i] = $scope.gwork.fixedtimings_thrash[i];
 			}
 
 			data = JSON.stringify(data);
@@ -615,7 +873,7 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 		$scope.loading_notification = 'Processing Course Constraints...';
 		$http.post(url, data).then(
 			function(response) {
-				//console.log(response.data);
+				console.log(response.data);
 				if (response.data.success == 1) {
 					$scope.loading_notification = 'Course Constraints Saved';
 				} else {
@@ -673,7 +931,7 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 	};
 
 	$scope.save_all_changes = function(event) {
-		if (confirm('Save All Changes')) {
+		if ($window.confirm('Save All Changes')) {
 			/**
        *	Basic Course Details
        */
@@ -691,7 +949,7 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 
 	$scope.close_setting = function() {
 		if ($scope.gwork.isChanges === true && $scope.gwork.saved === false) {
-			if (confirm('Do you want to save changes')) {
+			if ($window.confirm('Do you want to save changes')) {
 				$scope.save_all_changes();
 				$scope.gwork.changes = [];
 				$scope.gwork.courseparticipants = [];
@@ -707,7 +965,7 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 	};
 
 	$scope.refreshPage = function() {
-		if (confirm('Refresh this page?')) {
+		if ($window.confirm('Refresh this page?')) {
 			/**
        *	Reload page from server, an args false will reload it from cache
        */
@@ -760,8 +1018,10 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 	};
 
 	$scope.remove_course = function(event) {
-		if (window.confirm('Do you want to delete?')) {
+		if ($window.confirm('Do you want to delete?')) {
 			cur_element = event.path[0];
+
+			cur_element.setAttribute('disabled', 'disabled');
 
 			url = $scope.absPath + 'process/proc1/remove_course.php';
 			data = {};
@@ -772,8 +1032,34 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 					if (response.data.success == 1) {
 						$scope.refreshPage();
 						document.getElementById('course_setting_modal').style.display = 'none';
+						cur_element.removeAttribute('disabled');
 					} else {
 						alert("Couldn't remove course");
+						cur_element.removeAttribute('disabled');
+					}
+				},
+				function(status) {}
+			);
+		}
+	};
+
+	$scope.remove_allocation_pathway = function(event) {
+		if ($window.confirm('Do you want to delete allocations for this course?')) {
+			cur_element = event.path[0];
+
+			cur_element.setAttribute('disabled', 'disabled');
+			url = $scope.absPath + 'process/proc1/remove_course_allocation_pathways.php';
+			data = {};
+			data.course_code = $scope.gwork.c_code;
+
+			$http.post(url, data).then(
+				function(response) {
+					if (response.data.success == 1) {
+						$window.alert('Allocation pathways destroyed');
+						cur_element.removeAttribute('disabled');
+					} else {
+						alert("Couldn't destroy pathways");
+						cur_element.removeAttribute('disabled');
 					}
 				},
 				function(status) {}
@@ -788,7 +1074,7 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 		if (document.querySelector('input#c_clash').checked) {
 			data.check_clashes = true;
 		} else {
-			if (confirm("Attention: You didn't avoid course clash \n \tDo you want continue")) {
+			if ($window.confirm("Attention: You didn't avoid course clash \n \tDo you want continue")) {
 				data.check_clashes = false;
 			} else {
 				return false;
@@ -800,10 +1086,6 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 		if (data.tolerance < 0) {
 			alert('Tolerance cant be negative');
 			return false;
-		}
-
-		if ((data.tolerance = 1)) {
-			data.tolerance = 1;
 		}
 
 		data.day = $scope.day;
@@ -818,12 +1100,12 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 			event.target.setAttribute('disabled', 'disabled');
 			$http.post(url, data).then(
 				function(response) {
-					//console.log(response.data);
+					// console.log(response.data);
 
 					if (response.data.success == 1) {
 						document.querySelector('p#error').style.color = 'green';
 						$scope.tolerance_feedback = 'Course has been fixed';
-						alert('Refresh to see changes');
+						toastr.success(c_code+' has been fixed, Refresh to see changes');
 					} else {
 						document.querySelector('p#error').style.color = 'red';
 						$scope.tolerance_feedback = response.data.msg;
@@ -840,8 +1122,66 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 		}
 	};
 
+	$scope.batch_fix_course = function(event) {
+		url = $scope.absPath + 'process/proc1/fixcourse.php';
+		data = {};
+
+		if (document.querySelector('input#bc_clash').checked) {
+			data.check_clashes = true;
+		} else {
+			if ($window.confirm("Attention: You didn't avoid course clash \n \tDo you want continue")) {
+				data.check_clashes = false;
+			} else {
+				return false;
+			}
+		}
+
+		data.tolerance = parseInt($scope.gwork.models.tolerance);
+		data.day = $scope.gwork.models.day;
+
+		if (data.tolerance < 0) {
+			alert('Tolerance cant be negative');
+			return false;
+		}
+
+		event.target.setAttribute('disabled', 'disabled');
+		Code = Object.entries($scope.gwork.unallocatedCheckList);
+
+			toastr.clear();
+			toastr.info('Processing... ');
+
+				i = 0;
+				PTBFX = function(i){
+					data.c_code = Code[i][0];
+					
+					$http.post(url, data).then(
+						function(response) {
+							// console.log(response.data);
+							
+							if (response.data.success == 1) {
+								toastr.success(data.c_code+' has been fixed');
+							} else {
+								toastr.error(data.c_code +':'+ response.data.msg);
+							}
+		
+							i += 1;
+							if(i < $scope.gwork.unallocatedCheckListLength) PTBFX(i);
+						},
+						function(status) {
+							console.log(status);
+						}
+					);
+				}
+
+				if( i === 0) PTBFX(i);
+
+		
+		event.target.removeAttribute('disabled');
+		return;
+	};
+
 	$scope.override_course = function(e) {
-		if (confirm('Do you want to forget this course') !== true) return false;
+		if ($window.confirm('Do you want to forget this course') !== true) return false;
 
 		url = $scope.absPath + 'process/proc1/overridecourse.php';
 		data = {};
@@ -897,4 +1237,130 @@ app.controller('ctrl', function($scope, $http, $location, $sce, $compile) {
 			alert('An Error Occured, refresh to continue');
 		}
 	};
+
+	$scope.selectAllVenuesof = function(selector = null) {
+		if (typeof selector !== null) {
+			var obj = document.querySelector(selector);
+
+			if (obj.options.length < 2) {
+				return;
+			}
+
+			for (var i = 1; i < obj.options.length; i++) {
+				obj.options[i].selected = !$scope.gwork.allselected;
+			}
+
+			$scope.gwork.allselected = !$scope.gwork.allselected;
+		} else {
+			alert("Error: Couldn't find target");
+		}
+	};
+
+	$scope.allocationRefelection = function(event){
+		// console.log(event);
+		// return;
+		item = event.target;
+		index = item.getAttribute('data-allocation-id');
+		
+		if($("#AI"+index).length > 0){
+            return;
+		}else{
+			if(index > 0){
+
+				x = (event.x) - 20;
+				y = (event.y + window.scrollY) - 20;
+
+				if( Math.abs(x - window.innerWidth) > 5 ){
+					x -= 50;
+				}
+
+				course = item.getAttribute('data-course-code');
+				
+				url = $scope.absPath + 'process/proc1/courseallocationReflection.php';
+				data = {};
+				data.c_code = course;
+				data.Aindex = index;
+
+				
+				$http.post(url, data).then(
+					function(response) {
+						
+						if(typeof response.data != 'object')
+							return;
+
+						
+						context = "<h5 style='text-align: center;'><b>"+course+"( "+response.data.cap+" Stud.)</b></h5><hr>";
+						prevday = null;
+						for( item in response.data) {
+							
+							item = response.data[item]
+							
+							if(typeof item == 'object'){
+
+								if(prevday != item.day) studEngaged = Math.ceil(( (100-item.tolerance_loss)/100)*response.data.cap)+' Engaged';
+								else studEngaged = '';
+
+								prevday = item.day;
+								context += '<b>'+item.day + '(' + item.time + '): '+studEngaged+'<br><p>Venue: '+item.venue.name+'<br>Capacity: '+item.venue.capacity+'<hr><br>';
+							}
+						}
+	
+
+						var reflection = "<div class='animated zoomIn fast' id='AI"+index+"' style=' padding: 8px; border-radius: 4px; background: #ff9100; opacity: 0.9; position:absolute; top:"+y+"px; left:"+x+"px; '> <a ng-click='closeReflection(\$event)' style='background: #e8eaf6; padding: 4px 8px;  border-radius: 50%; position: absolute; left: -5px; top: -5px;'>x</a> <div style='position: relative; max-height: 400px; overflow-y: auto;'>"+context+" </div>  </div>";
+
+
+						$('section#TableSection').append(reflection);
+						$compile( $("#AI"+index) )($scope);
+						
+					},
+					function(status) {}
+				);
+
+
+				
+			}
+		}
+		
+		
+	};
+
+	$scope.closeReflection = function(event){
+		
+		item = event.target;
+		item.parentElement.remove();
+		
+	};
+
+
+	$scope.stageUnallocatedChecks = function(event){
+
+		item = event.target;
+		value = event.target.value;
+
+		if( event.target.checked ){
+			$scope.gwork.unallocatedCheckList[value] = true;
+		}else{
+			if( $scope.gwork.unallocatedCheckList[value] == true) delete $scope.gwork.unallocatedCheckList[value];
+		}
+		
+		$scope.gwork.unallocatedCheckListLength = Object.getOwnPropertyNames($scope.gwork.unallocatedCheckList).length;
+		
+		return;
+	};
+
+
+	/**
+	 * Configurations
+	 */
+
+	 // Configure toastr
+	$scope.setToastrOptions = (function() {
+		toastr.options.positionClass = 'toast-bottom-right';
+		toastr.options.closeButton = true;
+		toastr.options.showMethod = 'slideDown';
+		toastr.options.hideMethod = 'slideUp';
+		//toastr.options.newestOnTop = false;
+		toastr.options.progressBar = false;
+		toastr.options.timeOut = 0;
+	})();
 });

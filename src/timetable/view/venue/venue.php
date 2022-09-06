@@ -134,8 +134,9 @@ $venue_operation_disabled = $data['venue_op_disabled'];
 						foreach ($venue as $id => $params) {
 
 							$op = '';
+							$pending = '';
 							if(!$venue_operation_disabled){
-								$pending = '';
+								
 								if($params[3] == 1){
 									//venue is or not in use
 									$pending = 'w3-pale-red';
